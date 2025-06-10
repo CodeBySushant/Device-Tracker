@@ -1,27 +1,41 @@
-const express = require("express")
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const path = require('path');
+
 const app = express();
-const path = require("path");
-
-const http = require("http");
-
-const socketio = require("socket.io");
 const server = http.createServer(app);
-const io = socketio(server);
+const io = socketIo(server);
 
-app.set("view engine", "ejs");
-app.set(express.static(path.join(__dirname, "public")));
+// Set EJS as the view engine
+app.set('view engine', 'ejs');
 
-io.on("connection", function(socket){
-    socket.on("send-location", function (data) {
-        io.emit("receive-location", {id: socket.id, ...data});
+// Serve static files (CSS, JS)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Route to render the main page
+app.get('/', (req, res) => {
+    res.render('index');
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+    console.log('A user connected:', socket.id);
+
+  // Handle location data from client
+    socket.on('send-location', (data) => {
+    io.emit('receive-location', { id: socket.id, ...data });
     });
-    socket.on("disconnect", function(){
-        io.emit("user-disconnected", socket.io);
-    })
+
+  // Handle disconnection
+    socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+    io.emit('user-disconnected', socket.id);
+    });
 });
 
-app.get("/", function (req, res) {
-    res.render("index");
+// Start the server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
-
-server.listen(3000);
